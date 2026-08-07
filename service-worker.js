@@ -1,7 +1,7 @@
 // StudyFlow — Service Worker
 // Sube este número cada vez que subas una versión nueva de index.html;
 // si no lo subes, los usuarios se quedan con la versión vieja en caché.
-var CACHE_VERSION = 'studyflow-v1';
+var CACHE_VERSION = 'studyflow-v2';
 
 var APP_SHELL = [
   './',
@@ -34,6 +34,31 @@ self.addEventListener('activate', function(event){
   );
 });
 
+self.addEventListener('push', function(event){
+  var datos = {};
+  try{ datos = event.data ? event.data.json() : {}; }catch(e){ datos = {titulo:'StudyFlow', cuerpo: event.data ? event.data.text() : ''}; }
+  var titulo = datos.titulo || 'StudyFlow';
+  var opciones = {
+    body: datos.cuerpo || '',
+    icon: 'icon-192.png',
+    badge: 'icon-192.png',
+    data: { url: datos.url || './' }
+  };
+  event.waitUntil(self.registration.showNotification(titulo, opciones));
+});
+
+self.addEventListener('notificationclick', function(event){
+  event.notification.close();
+  var url = (event.notification.data && event.notification.data.url) || './';
+  event.waitUntil(
+    clients.matchAll({type:'window', includeUncontrolled:true}).then(function(lista){
+      for(var i=0;i<lista.length;i++){
+        if('focus' in lista[i]) return lista[i].focus();
+      }
+      if(clients.openWindow) return clients.openWindow(url);
+    })
+  );
+});
 // Red primero para el propio index.html (para no quedarte pillado en una
 // versión vieja mientras desarrollas), caché primero para el resto.
 self.addEventListener('fetch', function(event){
